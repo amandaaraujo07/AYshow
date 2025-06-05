@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router'; // Importa o useRouter
 
 
@@ -9,7 +9,7 @@ export default function Filmesfavoritos() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-            <View style={styles.cabecalho}>
+            <View style={styles.cabecalho}>           
                 <TouchableOpacity style={styles.botao}>
                     <Text style={styles.paginas} onPress={() => router.push('/')}>HOME</Text>
                 </TouchableOpacity>
