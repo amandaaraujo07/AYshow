@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Image, ScrollView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 const API_KEY = '4fdf0707cc202ce4e0c18eb7762fd252';
 const BASE_URL = 'https://api.themoviedb.org/3';
@@ -23,6 +24,7 @@ export default function InformacoesFilme() {
   const [movieDetails, setMovieDetails] = useState<MovieDetails | null>(null); // Estado para armazenar os detalhes do filme
   const [loading, setLoading] = useState(true); // Estado para controle de carregamento
   const [error, setError] = useState<string | null>(null); // Estado para armazenar erros
+  const router = useRouter();
 
   useEffect(() => {
     if (movieId) {
@@ -77,6 +79,9 @@ export default function InformacoesFilme() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}> 
+      <TouchableOpacity style={styles.voltar}>
+        <Text style={styles.tituloInfor} onPress={() => router.push('/')}>◀ voltar </Text>
+      </TouchableOpacity>
       {movieDetails.poster_path ? ( // Verifica se o filme tem poster
         <Image
           source={{ uri: `${IMAGE_BASE_URL}${movieDetails.poster_path}` }} // Constrói a URL da imagem do poster
@@ -122,6 +127,17 @@ const styles = StyleSheet.create({
     color: '#BB86FC',
     fontSize: 16,
     marginTop: 10,
+  },
+
+  tituloInfor:{
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#E0E0E0',
+    marginBottom: 20,
+  },
+  
+  voltar: {
+    marginRight: 150,
   },
 
   errorText: {
@@ -171,11 +187,11 @@ const styles = StyleSheet.create({
   },
 
   titulo: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 15,
-    color: '#E0E0E0',
+    color: '#BB86FC',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 5,
@@ -195,7 +211,7 @@ const styles = StyleSheet.create({
     marginTop: 25,
     marginBottom: 10,
     alignSelf: 'flex-start',
-    color: '#E0E0E0',
+    color: '#BB86FC',
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
