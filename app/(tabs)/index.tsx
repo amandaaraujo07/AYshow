@@ -1,38 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react'; // Importa useRef para valores de animação
-import { View, Text, FlatList, ActivityIndicator, Image, TouchableOpacity, StyleSheet, Animated } from 'react-native'; // Importa Animated para animações
-import { Link } from 'expo-router'; // Importa Link para navegação no Expo Router
-import { useRouter } from 'expo-router'; // Importa o useRouter
-import { TextInput } from 'react-native'; // Certifique-se de importar o TextInput
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, FlatList, ActivityIndicator, Image, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { TextInput } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons'; // Ícone de coração do FontAwesome
 
-const API_KEY = '4fdf0707cc202ce4e0c18eb7762fd252'; // Substitua pelo seu API Key
+const API_KEY = '4fdf0707cc202ce4e0c18eb7762fd252';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
-interface Movie { // Define a interface para o filme
+interface Movie {
   id: number;
   title: string;
-  poster_path: string | null; // O caminho do pôster pode ser nulo se não houver imagem
+  poster_path: string | null;
 }
 
-// Componente separado para o item de filme para lidar com a animação
-const MovieItem = ({ item }: { item: Movie }) => {
-  // Cria um valor animado para a escala do item, inicializado em 1
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+// Componente separado para o item de filme
+const MovieItem = ({ item, favoriteMovieIds, toggleFavorite }: { item: Movie; favoriteMovieIds: number[]; toggleFavorite: (movieId: number) => void }) => { // favoriteMovieIds agora é um array de números
+  const scaleAnim = useRef(new Animated.Value(1)).current; // Animação para o efeito de pressionar
+  // Verifica se este filme é favorito
+  const isFavorite = favoriteMovieIds.includes(item.id); // Verifica se o ID do filme está nos favoritos
 
-  // Função para lidar com o início do toque/pressão (zoom in)
-  const handlePressIn = () => {
+  const handlePressIn = () => { // Efeito de pressionar
     Animated.spring(scaleAnim, {
-      toValue: 1.05, // Aumenta o tamanho em 5%
-      useNativeDriver: true, // Usa o driver nativo para melhor performance
-      friction: 3, // Controla a dinâmica da mola (menos fricção = mais oscilação)
-      tension: 40, // Controla a dinâmica da mola (mais tensão = mais rápido)
+      toValue: 1.05,
+      useNativeDriver: true,
+      friction: 3,
+      tension: 40,
     }).start();
   };
 
-  // Função para lidar com o fim do toque/pressão (zoom out)
-  const handlePressOut = () => {
+  const handlePressOut = () => { // Efeito de soltar
     Animated.spring(scaleAnim, {
-      toValue: 1, // Retorna ao tamanho original
+      toValue: 1,
       useNativeDriver: true,
       friction: 3,
       tension: 40,
@@ -40,16 +40,17 @@ const MovieItem = ({ item }: { item: Movie }) => {
   };
 
   return (
-    <Link href={{ pathname: '/informacoes', params: { movieId: item.id } }} asChild>
-      <TouchableOpacity
-        style={styles.ItemFilme}
-        onPressIn={handlePressIn} // Ativa a animação ao pressionar
-        onPressOut={handlePressOut} // Retorna a animação ao soltar
-        activeOpacity={0.7} // Reduz a opacidade levemente ao pressionar
-      >
-        {/* Aplica a transformação de escala animada */}
-        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-          {item.poster_path ? ( // Verifica se o filme tem imagem de pôster
+    // TouchableOpacity para todo o item do filme
+    <TouchableOpacity
+      style={styles.ItemFilme}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={0.7}
+    >
+      {/* Link para a tela de informações do filme */} 
+      <Link href={{ pathname: '/informacoes', params: { movieId: item.id, favoriteMovieIds: JSON.stringify(favoriteMovieIds) } }} asChild> 
+        <Animated.View style={{ transform: [{ scale: scaleAnim }], flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          {item.poster_path ? ( 
             <Image
               source={{ uri: `${IMAGE_BASE_URL}${item.poster_path}` }}
               style={styles.ImagemFilme}
@@ -59,20 +60,50 @@ const MovieItem = ({ item }: { item: Movie }) => {
               <Text style={styles.imagemTexto}>Sem Imagem</Text>
             </View>
           )}
+          <Text style={styles.tituloF}>{item.title}</Text>
         </Animated.View>
-        <Text style={styles.tituloF}>{item.title}</Text>
+      </Link>
+      {/* Botão de Favorito separado para não acionar a navegação */}
+      <TouchableOpacity
+        onPress={(e) => {
+          e.stopPropagation(); // ESSENCIAL: Impede que o clique no coração acione a navegação
+          toggleFavorite(item.id);
+        }}
+        style={styles.favoriteIconContainer}
+      >
+        <FontAwesome
+          name={isFavorite ? 'heart' : 'heart-o'} // Ícone de coração preenchido ou vazio
+          size={24} // Tamanho do ícone
+          color={isFavorite ? '#CF6679' : '#BB86FC'} // Cor do ícone
+        />
       </TouchableOpacity>
-    </Link>
+    </TouchableOpacity>
   );
 };
 
 
-export default function HomeScreen() { // Componente principal da tela inicial
-  const [movies, setMovies] = useState<Movie[]>([]); // Estado para armazenar a lista de filmes
-  const [loading, setLoading] = useState(true); // Estado para controle de carregamento
-  const [error, setError] = useState<string | null>(null); // Estado para armazenar erros
-  const router = useRouter(); // Inicializa o roteador
-  const [searchText, setSearchText] = useState(''); // Estado para o texto da pesquisa
+export default function HomeScreen() {
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const [searchText, setSearchText] = useState('');
+  // Estado para armazenar os IDs dos filmes favoritos
+  const [favoriteMovieIds, setFavoriteMovieIds] = useState<number[]>([]);
+
+  // Função para adicionar ou remover um filme dos favoritos
+  const toggleFavorite = (movieId: number) => {
+    setFavoriteMovieIds((prevIds) => {
+      if (prevIds.includes(movieId)) {
+        // Se já está nos favoritos, remove
+        return prevIds.filter((id) => id !== movieId);
+      } else {
+        // Se não está, adiciona
+        return [...prevIds, movieId];
+      }
+    });
+  };
+
   const filteredMovies = movies.filter((movie) =>
     movie.title.toLowerCase().includes(searchText.toLowerCase())
   );
@@ -81,36 +112,34 @@ export default function HomeScreen() { // Componente principal da tela inicial
     const fetchMovies = async () => {
       try {
         const response = await fetch(
-          `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=pt-BR&page=1` // URL da API para buscar filmes populares
+          `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=pt-BR&page=1`
         );
-        if (!response.ok) { // Verifica se a resposta é bem-sucedida
+        if (!response.ok) {
           throw new Error(`Erro HTTP! status: ${response.status}`);
         }
-        const data = await response.json(); // Converte a resposta para JSON
+        const data = await response.json();
         setMovies(data.results);
-      } catch (err: any) { // Captura erros e define a mensagem de erro
-        console.error('Erro ao buscar filmes:', err); // Log para depuração
+      } catch (err: any) {
+        console.error('Erro ao buscar filmes:', err);
         setError(err.message);
       } finally {
-        setLoading(false); // Define o estado de carregamento como falso no final
+        setLoading(false);
       }
     };
 
-    fetchMovies(); // Chama a função para buscar filmes populares
+    fetchMovies();
   }, []);
 
-  if (loading) { // Se estiver carregando, exibe o indicador de carregamento
+  if (loading) {
     return (
       <View style={styles.erroCarregamento}>
-        {/* Cor do indicador de carregamento em tom de roxo */}
         <ActivityIndicator size="large" color="#BB86FC" />
-        {/* Texto de carregamento com estilo definido */}
         <Text style={styles.loadingText}>Carregando filmes...</Text>
       </View>
     );
   }
 
-  if (error) { // Se houver um erro, exibe a mensagem de erro
+  if (error) {
     return (
       <View style={styles.erroCarregamento}>
         <Text style={styles.errorText}>Erro ao carregar filmes: {error}</Text>
@@ -119,53 +148,59 @@ export default function HomeScreen() { // Componente principal da tela inicial
     );
   }
 
-  // Função para renderizar cada item da lista de filmes usando o componente MovieItem
   const renderMovieItem = ({ item }: { item: Movie }) => (
-    <MovieItem item={item} />
+    <MovieItem item={item} favoriteMovieIds={favoriteMovieIds} toggleFavorite={toggleFavorite} />
   );
 
   return (
     <View style={styles.container}>
-    <View style={styles.header}>
-      <View style={styles.cabecalho}>
-        <TouchableOpacity style={styles.botao}>
-          <Text style={styles.paginas}>HOME</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.botao} onPress={() => router.push('/favoritos')}>
-          <Text style={styles.paginas}>FAVORITOS</Text>
-        </TouchableOpacity>
+      <View style={styles.header}>
+        <View style={styles.cabecalho}>
+          <Image
+            source={require('../../assets/images/LOGO.png')}
+            style={styles.image}
+          />
+          <TouchableOpacity style={styles.botao}>
+            <Text style={styles.paginas}>HOME</Text>
+          </TouchableOpacity>
+          {/* Ao navegar para favoritos, passe os IDs favoritos */}
+          <TouchableOpacity style={styles.botao} onPress={() => router.push({ pathname: '/favoritos', params: { favoriteMovieIds: JSON.stringify(favoriteMovieIds) } })}>
+            <Text style={styles.paginas}>FAVORITOS</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      <TextInput
+        style={styles.pesquisa}
+        placeholder="Pesquisar filmes..."
+        placeholderTextColor="#888"
+        value={searchText}
+        onChangeText={(text) => setSearchText(text)}
+      />
+
+      <FlatList
+        data={filteredMovies}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderMovieItem}
+        contentContainerStyle={styles.lista}
+      />
     </View>
-
-    {/* Barra de Pesquisa */}
-    <TextInput
-      style={styles.pesquisa}
-      placeholder="Pesquisar filmes..."
-      placeholderTextColor="#888"
-      value={searchText}
-      onChangeText={(text) => setSearchText(text)} // Atualiza o estado ao digitar
-    />
-
-    {/* Lista de Filmes */}
-    <FlatList
-      data={filteredMovies} // Use os filmes filtrados
-      keyExtractor={(item) => item.id.toString()}
-      renderItem={renderMovieItem}
-      contentContainerStyle={styles.lista}
-    />
-  </View>
   );
 }
 
 const styles = StyleSheet.create({
   cabecalho: {
     flexDirection: "row",
-    justifyContent: "flex-end", // Posiciona os botões no lado direito
-    alignItems: "center", // Centraliza os botões verticalmente
+    justifyContent: "flex-end",
+    alignItems: "center",
     padding: 10,
     margin: 10,
     borderRadius: 10,
-    marginLeft: 90, // Espaço à direita para não colidir com a borda da tela
+  },
+
+  image: {
+    width: 70,
+    height: 50,
   },
 
   botao: {
@@ -182,51 +217,51 @@ const styles = StyleSheet.create({
 
   pesquisa: {
     height: 40,
-    borderColor: '#BB86FC', // Cor da borda em tom de roxo
+    borderColor: '#BB86FC',
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 15,
     margin: 10,
-    backgroundColor: '#2c2c2c', // Fundo escuro para a barra de pesquisa
-    color: '#fff', // Cor do texto na barra de pesquisa
+    backgroundColor: '#2c2c2c',
+    color: '#fff',
   },
-  
+
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a', // Fundo escuro para uma sensação cinematográfica
+    backgroundColor: '#1a1a1a',
   },
 
   header: {
-    backgroundColor: '#4A0E6E', // Cabeçalho em roxo vibrante
+    backgroundColor: '#4A0E6E',
     paddingVertical: 15,
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderBottomLeftRadius: 15, // Cantos arredondados na parte inferior
+    borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
-    shadowColor: '#000', // Sombra para o cabeçalho
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
-    elevation: 8, // Elevação para Android
-    marginBottom: 10, // Espaço entre o cabeçalho e a lista
+    elevation: 8,
+    marginBottom: 10,
   },
 
   erroCarregamento: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a', // Cor de fundo correspondente ao container
+    backgroundColor: '#1a1a1a',
   },
 
   loadingText: {
-    color: '#BB86FC', // Tom de roxo para o texto de carregamento
+    color: '#BB86FC',
     fontSize: 16,
     marginTop: 10,
   },
 
   errorText: {
-    color: '#CF6679', // Um tom de vermelho/rosa suave para mensagens de erro
+    color: '#CF6679',
     fontSize: 16,
     textAlign: 'center',
     marginHorizontal: 20,
@@ -234,29 +269,30 @@ const styles = StyleSheet.create({
   },
 
   ItemFilme: {
-    flexDirection: 'row',
+    flexDirection: 'row', // Permite que a imagem, título e coração fiquem na mesma linha
     alignItems: 'center',
-    backgroundColor: '#4b0082', // Cinza escuro, não preto, como solicitado
+    justifyContent: 'space-between', // Espaçamento entre os elementos
+    backgroundColor: '#4b0082',
     padding: 12,
     marginVertical: 8,
     marginHorizontal: 15,
-    borderRadius: 12, // Cantos mais arredondados
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
-    elevation: 5, // Elevação para Android
-    borderWidth: 1, // Borda sutil
-    borderColor: '#3a3a3a', // Borda em tom de cinza mais escuro
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#3a3a3a',
   },
 
   ImagemFilme: {
-    width: 70, // Imagem ligeiramente maior
-    height: 105, // Mantém a proporção
+    width: 70,
+    height: 105,
     borderRadius: 8,
     marginRight: 15,
-    borderWidth: 1, // Borda sutil ao redor da imagem
-    borderColor: '#5a5a5a', // Borda em tom de prata
+    borderWidth: 1,
+    borderColor: '#5a5a5a',
   },
 
   imagemIcone: {
@@ -264,7 +300,7 @@ const styles = StyleSheet.create({
     height: 105,
     borderRadius: 8,
     marginRight: 15,
-    backgroundColor: '#3a3a3a', // Fundo mais escuro para o placeholder "sem imagem"
+    backgroundColor: '#3a3a3a',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -274,21 +310,28 @@ const styles = StyleSheet.create({
   imagemTexto: {
     fontSize: 12,
     textAlign: 'center',
-    color: '#888', // Cinza mais claro para o texto do placeholder
+    color: '#888',
   },
 
   tituloF: {
-    fontSize: 18, // Tamanho da fonte ligeiramente maior
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#E0E0E0', // Prata/quase branco para os títulos dos filmes
-    flexShrink: 1, // Permite que o texto encolha se for muito longo
-    textShadowColor: 'rgba(0, 0, 0, 0.5)', // Sombra sutil no texto para legibilidade
+    color: '#E0E0E0',
+    flexShrink: 1, // Permite que o texto encolha
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+    flex: 1, // Permite que o título ocupe o espaço restante
   },
 
   lista: {
     paddingVertical: 10,
-    paddingBottom: 20, // Adiciona preenchimento na parte inferior da lista para melhor rolagem
+    paddingBottom: 20,
   },
+
+  favoriteIconContainer: { // Estilo para o container do ícone de favorito
+    paddingLeft: 10, // Espaçamento à esquerda para separar do título
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });

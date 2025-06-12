@@ -1,45 +1,14 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
+import { Stack } from 'expo-router'; // O Stack é um tipo de navegador que cria uma pilha de telas.
 
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
+export default function RootLayout() { // componente RootLayout é o ponto de entrada principal para a configuração da navegação
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+    <Stack>
+      {/* A tela inicial (index) pode ter o cabeçalho oculto */}
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      {/* A tela de informações (informacoes) deve ter o cabeçalho visível */}
+      <Stack.Screen name="informacoes" options={{ title: 'Detalhes do Filme' }} />
+      {/* A tela de favoritos também pode ter o cabeçalho oculto */}
+      <Stack.Screen name="favoritos" options={{ headerShown: false}} />
+    </Stack>
   );
 }
