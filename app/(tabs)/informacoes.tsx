@@ -29,6 +29,8 @@ export default function InformacoesFilme() {
   useEffect(() => {
     if (movieId) {
       const fetchMovieDetails = async () => {
+        setLoading(true);
+        setError(null);
         try {
           const response = await fetch( // Busca os detalhes do filme usando o ID
             `${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&language=pt-BR`
@@ -108,6 +110,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1a1a',
+    marginTop: 40,
   },
 
   contentContainer: {
@@ -133,11 +136,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#E0E0E0',
-    marginBottom: 20,
   },
   
   voltar: {
-    marginRight: 150,
+    marginRight: 280,
+    marginBottom: 10,
   },
 
   errorText: {
